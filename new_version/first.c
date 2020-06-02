@@ -18,8 +18,8 @@ const double g_sss = 0.1;            // sigma_sigma_sigma coupling constant
 #define M 31                          // number of grid points
 const double L = 12.0;                // range of grid
 const double node_0 = 2.3;           // initial point of grid
-#define TOTAL 6*(N + M) + 2          // number of vector components
-                    
+#define TOTAL (6*(N + M) + 2)      // number of vector components
+#define NM (N+M)  
 const double pi = 3.14159265358979323846;    // pi number
 const double eps = 10E-16;                   // reqularizaion in Im function 
 const double Lambda = 1.0;                   // UF cut-off
@@ -188,7 +188,6 @@ double* weight() {
 		exit(EXIT_FAILURE);
 		}	    
 	}
-		    
  
     
     fclose(fp);
@@ -213,7 +212,9 @@ double* roots() {
 		exit(1);
 	} 
 	
-    
+	
+	
+	    
     fp = fopen(filename, "r");
     if (!fp){
         printf("Could not open file %s",filename);
@@ -247,11 +248,13 @@ double* sigma_rhs(const double y[], double t, double (*f)(double, double, double
     root = roots();
 	w = weight();
 	
-	double* rho_root = (double*)malloc(N * sizeof(double));
+	
+	double rho_root[N] = {0};
 	for (i = 0; i < N; ++i)
 	{rho_root[i] =  y[2*(N + M) + i];}
 	
-	double* rho_pi_root = (double*)malloc(N * sizeof(double));
+	
+	double  rho_pi_root[N] = {0};
 	for (i = 0; i < N; ++i)
 	{rho_pi_root[i] =  y[5*(N + M) + i];}
 	
@@ -261,22 +264,16 @@ double* sigma_rhs(const double y[], double t, double (*f)(double, double, double
 	double m = (m_pi < m_sigma) ? m_pi : m_sigma;                   // min value of m_pi and m_sigma
 	  
     
-    double* sum1   = (double *)malloc((N + M) * sizeof(double));
-    double* sum3   = (double *)malloc((N + M) * sizeof(double));
-    double* sum12  = (double *)malloc((N + M) * sizeof(double));
-    double* sum13  = (double *)malloc((N + M) * sizeof(double));
-    double* sum0   = (double *)malloc((N + M) * sizeof(double));
+    double sum1[NM]  = {0};
+    double sum3[NM]   = {0};
+    double sum12 [NM] = {0};
+    double sum13 [NM] = {0};
+    double sum0 [NM]  = {0};
        
-	
+	 
     #pragma omp parallel for private ( i ) num_threads(threads)
 	for (i = 0; i < N + M; ++i)
-	{    
-	 sum1[i] = 0;
-     sum3[i] = 0;
-     sum12[i] = 0;
-     sum13[i] = 0;
-     sum0[i] = 0;		
-		
+	{  
 		for(int i1 = 0; i1 < N; ++i1)
 		{
 			for(int i2 = 0; i2 < N; ++i2 )
@@ -320,17 +317,19 @@ double* sigma_rhs(const double y[], double t, double (*f)(double, double, double
 	//	rh_re[i] = Lambda * Lambda * exp(-2 * t) * (g_sss * g_sss * (*f)(root[i], m_sigma, m_sigma, m_sigma) + 3 * g_pps * g_pps * (*f)(root[i], m_pi, m_pi, m_pi) + sum3[i] + 2*sum1[i] + 1*sum12[i]  + 2*sum13[i] + sum0[i]);
      //}    
      
-        
+     
+     /*   
    free(sum1);
    free(sum3);
    free(sum12);
    free(sum13);
    free(sum0);  
+      */
        
    free(root);
    free(w);
-   free(rho_root);
-   free(rho_pi_root);
+ //  free(rho_root);
+  // free(rho_pi_root);
    return rh_re;
 }
 
@@ -345,11 +344,11 @@ double* pi_rhs(const double y[], double t, double (*f)(double, double, double, d
     root = roots();
 	w = weight();
 	
-	double* rho_root = (double*)malloc(N * sizeof(double));
+	double rho_root[N] ;
 	for (i = 0; i < N; ++i)
 	{rho_root[i] =  y[2*(N + M) + i];}
 	
-	double* rho_pi_root = (double*)malloc(N * sizeof(double));
+	double rho_pi_root[N];
 	for (i = 0; i < N; ++i)
 	{rho_pi_root[i] =  y[5*(N + M) + i];}
 	
@@ -359,22 +358,17 @@ double* pi_rhs(const double y[], double t, double (*f)(double, double, double, d
 	double m = (m_pi < m_sigma) ? m_pi : m_sigma;                   // min value of m_pi and m_sigma
 	  
     
-    double* sum1  = (double *)malloc((N + M) * sizeof(double));
-    double* sum3  = (double *)malloc((N + M) * sizeof(double));
-    double* sum12 = (double *)malloc((N + M) * sizeof(double));
-    double* sum13 = (double *)malloc((N + M) * sizeof(double));
-    double* sum0  = (double *)malloc((N + M) * sizeof(double));
+    double sum1[NM]  = {0};
+    double sum3 [NM] = {0};
+    double sum12 [NM] = {0};
+    double sum13 [NM] = {0};
+    double sum0  [NM] = {0};
        
 	
     #pragma omp parallel for private ( i ) num_threads(threads)
 	for (i = 0; i < N + M; ++i)
 	{    
-	 sum1[i] = 0;
-     sum3[i] = 0;
-     sum12[i] = 0;
-     sum13[i] = 0;
-     sum0[i] = 0;		
-		
+	 		
 		for(int i1 = 0; i1 < N; ++i1)
 		{
 			for(int i2 = 0; i2 < N; ++i2 )
@@ -422,17 +416,9 @@ double* pi_rhs(const double y[], double t, double (*f)(double, double, double, d
     // }    
     
      
-   free(sum1);
-   free(sum3);
-   free(sum12);
-   free(sum13);
-   free(sum0);
-         
    free(root);
    free(w);
-   free(rho_root);
-   free(rho_pi_root);
-   return rh_re;
+  return rh_re;
 }	
 
 
@@ -448,11 +434,11 @@ double sigma_rhs_mass(const double y[], double t){
     root = roots();
 	w = weight();
 	
-	double* rho_root = (double*)malloc(N * sizeof(double));
+	double rho_root [N];
 	for (i = 0; i < N; ++i)
 	{rho_root[i] =  y[2*(N + M) + i];}
 	
-	double* rho_pi_root = (double*)malloc(N * sizeof(double));
+	double rho_pi_root [N];
 	for (i = 0; i < N; ++i)
 	{rho_pi_root[i] =  y[5*(N + M) + i];}
 	
@@ -511,9 +497,7 @@ double sigma_rhs_mass(const double y[], double t){
   
    free(root);
    free(w);
-   free(rho_root);
-   free(rho_pi_root);
-   
+     
   return rh_mass;
 }
 
@@ -527,11 +511,11 @@ double pi_rhs_mass(const double y[], double t){
     root = roots();
 	w = weight();
 	
-	double* rho_root = (double*)malloc(N * sizeof(double));
+	double rho_root[N] ;
 	for (i = 0; i < N; ++i)
 	{rho_root[i] =  y[2*(N + M) + i];}
 	
-	double* rho_pi_root = (double*)malloc(N * sizeof(double));
+	double rho_pi_root [N];
 	for (i = 0; i < N; ++i)
 	{rho_pi_root[i] =  y[5*(N + M) + i];}
 	
@@ -581,9 +565,7 @@ double pi_rhs_mass(const double y[], double t){
   
    free(root);
    free(w);
-   free(rho_root);
-   free(rho_pi_root);
-   
+     
    return rh_pi_mass;
 }	
 
@@ -595,14 +577,14 @@ double pi_rhs_mass(const double y[], double t){
 double* sigma_rhs_rho(const double y[], double t){
 	int i;
 	
-    double* rh_rho  = (double *)malloc((N+M) * sizeof(double));
+    double *rh_rho  = (double *)malloc((N+M) * sizeof(double));
           
-    double* re_Gamma = (double *)malloc((M+N) * sizeof(double));
+    double re_Gamma [NM];
     for(i = 0; i < M + N; ++i){
         re_Gamma[i] = y[i];
     }  
         
-    double* im_Gamma = (double *)malloc((M+N) * sizeof(double));
+    double im_Gamma[NM] ;
     for(i = 0; i < M + N; ++i){
         im_Gamma[i] = y[N+M+i];
      }
@@ -619,8 +601,7 @@ double* sigma_rhs_rho(const double y[], double t){
         rh_rho[i] = (1.0/pi * (-im_Gamma[i]*im_Gamma[i] + (re_Gamma[i]-exp(-2*t))*(re_Gamma[i]-exp(-2*t)))/ pow(im_Gamma[i]*im_Gamma[i] + (re_Gamma[i]- exp(-2*t))*(re_Gamma[i]- exp(-2*t)),2) * rh_im[i] - 2.0/pi * (im_Gamma[i]*(re_Gamma[i]-exp(-2*t)) ) / pow(im_Gamma[i]*im_Gamma[i] + (re_Gamma[i]- exp(-2*t))*(re_Gamma[i]- exp(-2*t)) ,2) * (rh_re[i]+2*exp(-2*t)));
     }
     
-    free(re_Gamma);
-    free(im_Gamma);
+  
     free(rh_im);
     free(rh_re);
    
@@ -634,12 +615,12 @@ double* pi_rhs_rho(const double y[], double t){
 	
     double* rh_pi_rho  = (double *)malloc((N+M) * sizeof(double));
           
-    double* re_Gamma = (double *)malloc((M+N) * sizeof(double));
+    double re_Gamma[NM];
     for(i = 0; i < M + N; ++i){
         re_Gamma[i] = y[i + 3 * (M + N) + 1];
     }  
         
-    double* im_Gamma = (double *)malloc((M+N) * sizeof(double));
+    double im_Gamma[NM];
     for(i = 0; i < M + N; ++i){
         im_Gamma[i] = y[4 * (N + M) + 1 + i];
      }
@@ -656,8 +637,7 @@ double* pi_rhs_rho(const double y[], double t){
         rh_pi_rho[i] = (1.0/pi * (-im_Gamma[i]*im_Gamma[i] + (re_Gamma[i]-exp(-2*t))*(re_Gamma[i]-exp(-2*t)))/ pow(im_Gamma[i]*im_Gamma[i] + (re_Gamma[i]- exp(-2*t))*(re_Gamma[i]- exp(-2*t)),2) * rh_im[i] - 2.0/pi * (im_Gamma[i]*(re_Gamma[i]-exp(-2*t)) ) / pow(im_Gamma[i]*im_Gamma[i] + (re_Gamma[i]- exp(-2*t))*(re_Gamma[i]- exp(-2*t)) ,2) * (rh_re[i]+2*exp(-2*t)));
     }
     
-    free(re_Gamma);
-    free(im_Gamma);
+    
     free(rh_im);
     free(rh_re);
    
