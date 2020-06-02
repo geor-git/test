@@ -14,8 +14,8 @@ const double g_pps = 1.0;            // pi-pi-sigma coupling constant
 const double g_sss = 0.1;            // sigma_sigma_sigma coupling constant
 
                     
-#define N 15                          // number of Gaissian-Lagguare nodes
-#define M 50                          // number of grid points
+#define N 10                          // number of Gaissian-Lagguare nodes
+#define M 31                          // number of grid points
 const double L = 12.0;                // range of grid
 const double node_0 = 2.3;           // initial point of grid
 #define TOTAL 6*(N + M) + 2          // number of vector components
@@ -236,11 +236,10 @@ double* roots() {
 
 
 
-// -----------------REAL PART RHS ------------------------------------
 
 // **************************** SIGMA RHS **************************
 
-double* sigma_rhs_re(const double y[], double t){
+double* sigma_rhs(const double y[], double t, double (*f)(double, double, double, double)){
 	int i;
 	double* rh_re = (double*)malloc((N + M) * sizeof(double));
 	double* root;
@@ -284,11 +283,11 @@ double* sigma_rhs_re(const double y[], double t){
 			{    double ai1i2 = w[i1] * w[i2] * exp(root[i1]+root[i2]) * rho_root[i1] * rho_root[i2] *  Heaviside(root[i1] - 4*m) * Heaviside(root[i2] - 4*m);
 				 double bi1i2 = w[i1] * w[i2] * exp(root[i1]+root[i2]) * rho_pi_root[i1] * rho_pi_root[i2] *  Heaviside(root[i1] - m_total) * Heaviside(root[i2] - m_total);
 				 
-                 sum3[i] += g_sss * g_sss * Re(root[i], root[i1], root[i2], m_sigma) * ai1i2 + 
-                            3 * g_pps * g_pps * Re(root[i], root[i1], root[i2], m_pi) * bi1i2;
+                 sum3[i] += g_sss * g_sss * (*f)(root[i], root[i1], root[i2], m_sigma) * ai1i2 + 
+                            3 * g_pps * g_pps * (*f)(root[i], root[i1], root[i2], m_pi) * bi1i2;
                             
-                 sum1[i] += g_sss * g_sss * Re(root[i], m_sigma, root[i1], root[i2]) * ai1i2 + 
-                            3 * g_pps * g_pps * Re(root[i], m_pi, root[i1], root[i2]) * bi1i2;
+                 sum1[i] += g_sss * g_sss * (*f)(root[i], m_sigma, root[i1], root[i2]) * ai1i2 + 
+                            3 * g_pps * g_pps * (*f)(root[i], m_pi, root[i1], root[i2]) * bi1i2;
                    }
          }
       
@@ -296,8 +295,8 @@ double* sigma_rhs_re(const double y[], double t){
         {   double ai3 = w[i3] * exp(root[i3]) * rho_root[i3] * Heaviside(root[i3] - 4 * m);
             double bi3 = w[i3] * exp(root[i3]) * rho_pi_root[i3] * Heaviside(root[i3] - m_total);
             
-            sum12[i] += g_sss * g_sss * Re(root[i], m_sigma, m_sigma, root[i3]) * ai3 + 3 * g_pps * g_pps * Re(root[i], m_pi, m_pi, root[i3]) * bi3;
-            sum13[i] += g_sss * g_sss * Re(root[i], m_sigma, root[i3], m_sigma) * ai3 + 3 * g_pps * g_pps * Re(root[i], m_pi, root[i3], m_pi) * bi3;
+            sum12[i] += g_sss * g_sss * (*f)(root[i], m_sigma, m_sigma, root[i3]) * ai3 + 3 * g_pps * g_pps * (*f)(root[i], m_pi, m_pi, root[i3]) * bi3;
+            sum13[i] += g_sss * g_sss * (*f)(root[i], m_sigma, root[i3], m_sigma) * ai3 + 3 * g_pps * g_pps * (*f)(root[i], m_pi, root[i3], m_pi) * bi3;
         }
  
        
@@ -306,7 +305,7 @@ double* sigma_rhs_re(const double y[], double t){
 			for(int i2 = 0; i2 < N; ++i2)
 			{
 				for(int i3 = 0; i3 < N; ++i3)
-				{   double ai1i2i3 = Re(root[i], root[i1], root[i2], root[i3]) * w[i1] * w[i2] * w[i3] * exp(root[i1]+root[i2]+root[i3]);
+				{   double ai1i2i3 = (*f)(root[i], root[i1], root[i2], root[i3]) * w[i1] * w[i2] * w[i3] * exp(root[i1]+root[i2]+root[i3]);
 					
 					sum0[i] += (g_sss * g_sss * rho_root[i1] * rho_root[i2] * rho_root[i3] * Heaviside(root[i1] - 4*m) * Heaviside(root[i2] - 4*m) * Heaviside(root[i3] - 4*m) + 
 					           3 * g_pps * g_pps * rho_pi_root[i1] * rho_pi_root[i2] * rho_pi_root[i3] * Heaviside(root[i1] - m_total) * Heaviside(root[i2] - m_total) * Heaviside(root[i3] - m_total)) * ai1i2i3; 
@@ -314,11 +313,11 @@ double* sigma_rhs_re(const double y[], double t){
 			}	
        } 
        
-     rh_re[i] = Lambda * Lambda * exp(-2 * t) * (g_sss * g_sss * Re(root[i], m_sigma, m_sigma, m_sigma) + 3 * g_pps * g_pps * Re(root[i], m_pi, m_pi, m_pi) + sum3[i] + 2*sum1[i] + 1*sum12[i]  + 2*sum13[i] + sum0[i]);
+     rh_re[i] = Lambda * Lambda * exp(-2 * t) * (g_sss * g_sss * (*f)(root[i], m_sigma, m_sigma, m_sigma) + 3 * g_pps * g_pps * (*f)(root[i], m_pi, m_pi, m_pi) + sum3[i] + 2*sum1[i] + 1*sum12[i]  + 2*sum13[i] + sum0[i]);
          }
     
   //  for(i = 0; i < N + M; ++i)  {
-	//	rh_re[i] = Lambda * Lambda * exp(-2 * t) * (g_sss * g_sss * Re(root[i], m_sigma, m_sigma, m_sigma) + 3 * g_pps * g_pps * Re(root[i], m_pi, m_pi, m_pi) + sum3[i] + 2*sum1[i] + 1*sum12[i]  + 2*sum13[i] + sum0[i]);
+	//	rh_re[i] = Lambda * Lambda * exp(-2 * t) * (g_sss * g_sss * (*f)(root[i], m_sigma, m_sigma, m_sigma) + 3 * g_pps * g_pps * (*f)(root[i], m_pi, m_pi, m_pi) + sum3[i] + 2*sum1[i] + 1*sum12[i]  + 2*sum13[i] + sum0[i]);
      //}    
      
         
@@ -333,13 +332,12 @@ double* sigma_rhs_re(const double y[], double t){
    free(rho_root);
    free(rho_pi_root);
    return rh_re;
-}	
-
+}
 
 
 // ************************** PION RHS ********************************
 
-double* pi_rhs_re(const double y[], double t){
+double* pi_rhs(const double y[], double t, double (*f)(double, double, double, double)){
 	int i;
 	double* rh_re = (double*)malloc((N + M) * sizeof(double));
 	double* root;
@@ -383,12 +381,12 @@ double* pi_rhs_re(const double y[], double t){
 			{    double ai1i2 = w[i1] * w[i2] * exp(root[i1]+root[i2]) * rho_root[i1] * rho_root[i2] *  Heaviside(root[i1] - 4*m) * Heaviside(root[i2] - 4*m);
 				 double bi1i2 = w[i1] * w[i2] * exp(root[i1]+root[i2]) * rho_pi_root[i1] * rho_pi_root[i2] *  Heaviside(root[i1] - m_total) * Heaviside(root[i2] - m_total);
 				 
-                 sum3[i] += Re(root[i], root[i1], root[i2], m_sigma) * bi1i2 + 
-                            Re(root[i], root[i1], root[i2], m_pi) * ai1i2;
+                 sum3[i] += (*f)(root[i], root[i1], root[i2], m_sigma) * bi1i2 + 
+                            (*f)(root[i], root[i1], root[i2], m_pi) * ai1i2;
                             
                  double ci1i2 = w[i1] * w[i2] * exp(root[i1]+root[i2]) * rho_root[i1] * rho_pi_root[i2] *  Heaviside(root[i1] - 4*m) * Heaviside(root[i2] - m_total);
 			          
-                 sum1[i] += (Re(root[i], m_sigma, root[i1], root[i2]) + Re(root[i], m_pi, root[i2], root[i1]) )* ci1i2; 
+                 sum1[i] += ((*f)(root[i], m_sigma, root[i1], root[i2]) + (*f)(root[i], m_pi, root[i2], root[i1]) )* ci1i2; 
                             
                    }
          }
@@ -397,8 +395,8 @@ double* pi_rhs_re(const double y[], double t){
         {   double ai3 = w[i3] * exp(root[i3]) * rho_root[i3] * Heaviside(root[i3] - 4 * m);
             double bi3 = w[i3] * exp(root[i3]) * rho_pi_root[i3] * Heaviside(root[i3] - m_total);
             
-            sum12[i] += Re(root[i], m_sigma, m_sigma, root[i3]) * bi3 + Re(root[i], m_pi, m_pi, root[i3]) * ai3;
-            sum13[i] += Re(root[i], m_sigma, root[i3], m_pi) * ai3 + Re(root[i], m_pi, root[i3], m_sigma) * bi3;
+            sum12[i] += (*f)(root[i], m_sigma, m_sigma, root[i3]) * bi3 + (*f)(root[i], m_pi, m_pi, root[i3]) * ai3;
+            sum13[i] += (*f)(root[i], m_sigma, root[i3], m_pi) * ai3 + (*f)(root[i], m_pi, root[i3], m_sigma) * bi3;
         }
  
        
@@ -407,7 +405,7 @@ double* pi_rhs_re(const double y[], double t){
 			for(int i2 = 0; i2 < N; ++i2)
 			{
 				for(int i3 = 0; i3 < N; ++i3)
-				{   double ai1i2i3 = Re(root[i], root[i1], root[i2], root[i3]) * w[i1] * w[i2] * w[i3] * exp(root[i1]+root[i2]+root[i3]);
+				{   double ai1i2i3 = (*f)(root[i], root[i1], root[i2], root[i3]) * w[i1] * w[i2] * w[i3] * exp(root[i1]+root[i2]+root[i3]);
 					
 					sum0[i] += (rho_root[i1] * rho_root[i2] * rho_pi_root[i3] * Heaviside(root[i1] - 4*m) * Heaviside(root[i2] - 4*m) * Heaviside(root[i3] - m_total) + 
 					            rho_pi_root[i1] * rho_pi_root[i2] * rho_root[i3] * Heaviside(root[i1] - m_total) * Heaviside(root[i2] - m_total) * Heaviside(root[i3] - 4*m)) * ai1i2i3; 
@@ -415,12 +413,12 @@ double* pi_rhs_re(const double y[], double t){
 			}	
        }
        
-    rh_re[i] = g_pps * g_pps * Lambda * Lambda * exp(-2 * t) * (Re(root[i], m_sigma, m_sigma, m_pi) + Re(root[i], m_pi, m_pi, m_sigma) + sum3[i] + 2*sum1[i] + 1*sum12[i]  + 2*sum13[i] + sum0[i]);
+    rh_re[i] = g_pps * g_pps * Lambda * Lambda * exp(-2 * t) * ((*f)(root[i], m_sigma, m_sigma, m_pi) + (*f)(root[i], m_pi, m_pi, m_sigma) + sum3[i] + 2*sum1[i] + 1*sum12[i]  + 2*sum13[i] + sum0[i]);
     
       } 
       
    // for(i = 0; i < N + M; ++i)  {
-	//	rh_re[i] = g_pps * g_pps * Lambda * Lambda * exp(-2 * t) * (Re(root[i], m_sigma, m_sigma, m_pi) + Re(root[i], m_pi, m_pi, m_sigma) + sum3[i] + 2*sum1[i] + 1*sum12[i]  + 2*sum13[i] + sum0[i]);
+	//	rh_re[i] = g_pps * g_pps * Lambda * Lambda * exp(-2 * t) * ((*f)(root[i], m_sigma, m_sigma, m_pi) + (*f)(root[i], m_pi, m_pi, m_sigma) + sum3[i] + 2*sum1[i] + 1*sum12[i]  + 2*sum13[i] + sum0[i]);
     // }    
     
      
@@ -435,211 +433,6 @@ double* pi_rhs_re(const double y[], double t){
    free(rho_root);
    free(rho_pi_root);
    return rh_re;
-}	
-
-
-
-	
-	
-// -----------------IMAGINARY PART RHS ------------------------------------
-
-// ***************** SIGMA RHS *******************************
-
-
-double* sigma_rhs_im(const double y[], double t){
-	int i;
-	double* rh_im = (double*)malloc((N + M) * sizeof(double));
-	double* root;
-	double* w;
-    root = roots();
-	w = weight();
-	
-	double* rho_root = (double*)malloc(N * sizeof(double));
-	for (i = 0; i < N; ++i)
-	{rho_root[i] =  y[2*(N + M) + i];}
-	
-	double* rho_pi_root = (double*)malloc(N * sizeof(double));
-	for (i = 0; i < N; ++i)
-	{rho_pi_root[i] =  y[5*(N + M) + i];}
-	
-	double m_sigma = y[3*(N + M)];
-	double m_pi    = y[6*(N + M) + 1];
-	double m_total = m_sigma + m_pi + 2 * sqrt(m_sigma * m_pi);
-	double m = (m_pi < m_sigma) ? m_pi : m_sigma;                   // min value of m_pi and m_sigma
-	  
-    
-    double* sum1   = (double *)malloc((N + M) * sizeof(double));
-    double* sum3   = (double *)malloc((N + M) * sizeof(double));
-    double* sum12  = (double *)malloc((N + M) * sizeof(double));
-    double* sum13  = (double *)malloc((N + M) * sizeof(double));
-    double* sum0   = (double *)malloc((N + M) * sizeof(double));
-       
-	
-    #pragma omp parallel for private ( i ) num_threads(threads)
-	for (i = 0; i < N + M; ++i)
-	{    
-	 sum1[i] = 0;
-     sum3[i] = 0;
-     sum12[i] = 0;
-     sum13[i] = 0;
-     sum0[i] = 0;		
-		
-		for(int i1 = 0; i1 < N; ++i1)
-		{
-			for(int i2 = 0; i2 < N; ++i2 )
-			{    double ai1i2 = w[i1] * w[i2] * exp(root[i1]+root[i2]) * rho_root[i1] * rho_root[i2] *  Heaviside(root[i1] - 4*m) * Heaviside(root[i2] - 4*m);
-				 double bi1i2 = w[i1] * w[i2] * exp(root[i1]+root[i2]) * rho_pi_root[i1] * rho_pi_root[i2] *  Heaviside(root[i1] - m_total) * Heaviside(root[i2] - m_total);
-				 
-                 sum3[i] += g_sss * g_sss * Im(root[i], root[i1], root[i2], m_sigma) * ai1i2 + 
-                            3 * g_pps * g_pps * Im(root[i], root[i1], root[i2], m_pi) * bi1i2;
-                            
-                 sum1[i] += g_sss * g_sss * Im(root[i], m_sigma, root[i1], root[i2]) * ai1i2 + 
-                            3 * g_pps * g_pps * Im(root[i], m_pi, root[i1], root[i2]) * bi1i2;
-                   }
-         }
-      
-        for(int i3 = 0; i3 < N; ++i3)
-        {   double ai3 = w[i3] * exp(root[i3]) * rho_root[i3] * Heaviside(root[i3] - 4 * m);
-            double bi3 = w[i3] * exp(root[i3]) * rho_pi_root[i3] * Heaviside(root[i3] - m_total);
-            
-            sum12[i] += g_sss * g_sss * Im(root[i], m_sigma, m_sigma, root[i3]) * ai3 + 3 * g_pps * g_pps * Im(root[i], m_pi, m_pi, root[i3]) * bi3;
-            sum13[i] += g_sss * g_sss * Im(root[i], m_sigma, root[i3], m_sigma) * ai3 + 3 * g_pps * g_pps * Im(root[i], m_pi, root[i3], m_pi) * bi3;
-        }
- 
-       
-       for(int i1 = 0; i1 < N; ++i1)
-       {
-			for(int i2 = 0; i2 < N; ++i2)
-			{
-				for(int i3 = 0; i3 < N; ++i3)
-				{   double ai1i2i3 = Im(root[i], root[i1], root[i2], root[i3]) * w[i1] * w[i2] * w[i3] * exp(root[i1]+root[i2]+root[i3]);
-					
-					sum0[i] += (g_sss * g_sss * rho_root[i1] * rho_root[i2] * rho_root[i3] * Heaviside(root[i1] - 4*m) * Heaviside(root[i2] - 4*m) * Heaviside(root[i3] - 4*m) + 
-					           3 * g_pps * g_pps * rho_pi_root[i1] * rho_pi_root[i2] * rho_pi_root[i3] * Heaviside(root[i1] - m_total) * Heaviside(root[i2] - m_total) * Heaviside(root[i3] - m_total)) * ai1i2i3; 
-			    }
-			}	
-       } 
-       
-    rh_im[i] = Lambda * Lambda * exp(-2 * t) * (g_sss * g_sss * Im(root[i], m_sigma, m_sigma, m_sigma) + 3 * g_pps * g_pps * Im(root[i], m_pi, m_pi, m_pi) + sum3[i] + 2*sum1[i] + 1*sum12[i]  + 2*sum13[i] + sum0[i]);
-    
-      } 
-      
-   // for(i = 0; i < N + M; ++i)  {
-	//	rh_im[i] = Lambda * Lambda * exp(-2 * t) * (g_sss * g_sss * Im(root[i], m_sigma, m_sigma, m_sigma) + 3 * g_pps * g_pps * Im(root[i], m_pi, m_pi, m_pi) + sum3[i] + 2*sum1[i] + 1*sum12[i]  + 2*sum13[i] + sum0[i]);
-    // }    
-      
-   free(sum1);
-   free(sum3);
-   free(sum12);
-   free(sum13);
-   free(sum0);  
-       
-   free(root);
-   free(w);
-   free(rho_root);
-   free(rho_pi_root);
-   return rh_im;
-}	
-
-
-
-//*************************** PION RHS *********************************
-double* pi_rhs_im(const double y[], double t){
-	int i;
-	double* rh_im = (double*)malloc((N + M) * sizeof(double));
-	double* root;
-	double* w;
-    root = roots();
-	w = weight();
-	
-	double* rho_root = (double*)malloc(N * sizeof(double));
-	for (i = 0; i < N; ++i)
-	{rho_root[i] =  y[2*(N + M) + i];}
-	
-	double* rho_pi_root = (double*)malloc(N * sizeof(double));
-	for (i = 0; i < N; ++i)
-	{rho_pi_root[i] =  y[5*(N + M) + i];}
-	
-	double m_sigma = y[3*(N + M)];
-	double m_pi    = y[6*(N + M) + 1];
-	double m_total = m_sigma + m_pi + 2 * sqrt(m_sigma * m_pi);
-	double m = (m_pi < m_sigma) ? m_pi : m_sigma;                   // min value of m_pi and m_sigma
-	  
-    
-    double* sum1  = (double *)malloc((N + M) * sizeof(double));
-    double* sum3  = (double *)malloc((N + M) * sizeof(double));
-    double* sum12 = (double *)malloc((N + M) * sizeof(double));
-    double* sum13 = (double *)malloc((N + M) * sizeof(double));
-    double* sum0  = (double *)malloc((N + M) * sizeof(double));
-       
-	
-    #pragma omp parallel for private ( i ) num_threads(threads)
-	for (i = 0; i < N + M; ++i)
-	{    
-	 sum1[i] = 0;
-     sum3[i] = 0;
-     sum12[i] = 0;
-     sum13[i] = 0;
-     sum0[i] = 0;		
-		
-		for(int i1 = 0; i1 < N; ++i1)
-		{
-			for(int i2 = 0; i2 < N; ++i2 )
-			{    double ai1i2 = w[i1] * w[i2] * exp(root[i1]+root[i2]) * rho_root[i1] * rho_root[i2] *  Heaviside(root[i1] - 4*m) * Heaviside(root[i2] - 4*m);
-				 double bi1i2 = w[i1] * w[i2] * exp(root[i1]+root[i2]) * rho_pi_root[i1] * rho_pi_root[i2] *  Heaviside(root[i1] - m_total) * Heaviside(root[i2] - m_total);
-				 
-                 sum3[i] += Im(root[i], root[i1], root[i2], m_sigma) * bi1i2 + 
-                            Im(root[i], root[i1], root[i2], m_pi) * ai1i2;
-                            
-                 double ci1i2 = w[i1] * w[i2] * exp(root[i1]+root[i2]) * rho_root[i1] * rho_pi_root[i2] *  Heaviside(root[i1] - 4*m) * Heaviside(root[i2] - m_total);
-			          
-                 sum1[i] += (Im(root[i], m_sigma, root[i1], root[i2]) + Im(root[i], m_pi, root[i2], root[i1]) )* ci1i2; 
-                            
-                   }
-         }
-      
-        for(int i3 = 0; i3 < N; ++i3)
-        {   double ai3 = w[i3] * exp(root[i3]) * rho_root[i3] * Heaviside(root[i3] - 4 * m);
-            double bi3 = w[i3] * exp(root[i3]) * rho_pi_root[i3] * Heaviside(root[i3] - m_total);
-            
-            sum12[i] += Im(root[i], m_sigma, m_sigma, root[i3]) * bi3 + Im(root[i], m_pi, m_pi, root[i3]) * ai3;
-            sum13[i] += Im(root[i], m_sigma, root[i3], m_pi) * ai3 + Im(root[i], m_pi, root[i3], m_sigma) * bi3;
-        }
- 
-       
-       for(int i1 = 0; i1 < N; ++i1)
-       {
-			for(int i2 = 0; i2 < N; ++i2)
-			{
-				for(int i3 = 0; i3 < N; ++i3)
-				{   double ai1i2i3 = Im(root[i], root[i1], root[i2], root[i3]) * w[i1] * w[i2] * w[i3] * exp(root[i1]+root[i2]+root[i3]);
-					
-					sum0[i] += (rho_root[i1] * rho_root[i2] * rho_pi_root[i3] * Heaviside(root[i1] - 4*m) * Heaviside(root[i2] - 4*m) * Heaviside(root[i3] - m_total) + 
-					            rho_pi_root[i1] * rho_pi_root[i2] * rho_root[i3] * Heaviside(root[i1] - m_total) * Heaviside(root[i2] - m_total) * Heaviside(root[i3] - 4*m)) * ai1i2i3; 
-			    }
-			}	
-       } 
-       
-    rh_im[i] = g_pps * g_pps * Lambda * Lambda * exp(-2 * t) * (Im(root[i], m_sigma, m_sigma, m_pi) + Im(root[i], m_pi, m_pi, m_sigma) + sum3[i] + 2*sum1[i] + 1*sum12[i]  + 2*sum13[i] + sum0[i]);
-       
-      } 
-      
-  //  for(i = 0; i < N + M; ++i)  {
-//		rh_im[i] = g_pps * g_pps * Lambda * Lambda * exp(-2 * t) * (Im(root[i], m_sigma, m_sigma, m_pi) + Im(root[i], m_pi, m_pi, m_sigma) + sum3[i] + 2*sum1[i] + 1*sum12[i]  + 2*sum13[i] + sum0[i]);
-  //   }    
-         
-    
-   free(sum1);
-   free(sum3);
-   free(sum12);
-   free(sum13);
-   free(sum0);
-         
-   free(root);
-   free(w);
-   free(rho_root);
-   free(rho_pi_root);
-   return rh_im;
 }	
 
 
@@ -815,11 +608,11 @@ double* sigma_rhs_rho(const double y[], double t){
      }
      
     double* rh_im;
-    rh_im =  sigma_rhs_im(y, t);
+    rh_im =  sigma_rhs(y, t, Im);
     
     
     double* rh_re;
-    rh_re =  sigma_rhs_re(y, t);
+    rh_re =  sigma_rhs(y, t, Re);
     
     #pragma omp parallel for private ( i ) num_threads(threads) 
     for(i = 0; i < N + M; ++i){
@@ -852,11 +645,11 @@ double* pi_rhs_rho(const double y[], double t){
      }
      
     double* rh_im;
-    rh_im =  pi_rhs_im(y, t);
+    rh_im =  pi_rhs(y, t, Im);
     
     
     double* rh_re;
-    rh_re =  pi_rhs_re(y, t);
+    rh_re =  pi_rhs(y, t, Re);
     
     #pragma omp parallel for private ( i ) num_threads(threads) 
     for(i = 0; i < N + M; ++i){
@@ -881,10 +674,10 @@ double* total_rhs(const double y[], double t){
 	int i;
 	
 	double* re_sigma;
-	re_sigma = sigma_rhs_re(y, t);
+	re_sigma = sigma_rhs(y, t, Re);
 	
 	double* im_sigma;
-	im_sigma = sigma_rhs_im(y, t);
+	im_sigma = sigma_rhs(y, t, Im);
 	
 	double* rho_sigma;
 	rho_sigma =  sigma_rhs_rho(y, t);
@@ -892,10 +685,10 @@ double* total_rhs(const double y[], double t){
 	double m_sigma = sigma_rhs_mass(y, t);
 	
 	double* re_pi;
-	re_pi = pi_rhs_re(y, t);
+	re_pi = pi_rhs(y, t, Re);
 	
 	double* im_pi;
-	im_pi = pi_rhs_im(y, t);
+	im_pi = pi_rhs(y, t, Im);
 	
 	double* rho_pi;
 	rho_pi =  pi_rhs_rho(y, t);
